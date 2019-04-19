@@ -1,3 +1,5 @@
+#haberturk.com'dan ilçelerin belediye meclis oylarını çeker
+
 import time
 startTime = time.time()
 import requests
