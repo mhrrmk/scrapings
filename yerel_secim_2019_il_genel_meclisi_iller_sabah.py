@@ -38,14 +38,14 @@ def get_il_meclis_data(il_url):
     return il_dict
 
 def data_to_csv(total_il_data):
-	fieldnamesSetPartiler = set()
-	partilerHaric = ["İl", "Toplam Seçmen", "Kullanılan Oy"]
+	fieldnames_set_partiler = set()
+	partiler_haric = ["İl", "Toplam Seçmen", "Kullanılan Oy"]
 	for data in total_il_data:
 		for key in data.keys():
-			if key not in partilerHaric:
-				fieldnamesSetPartiler.add(key)
+			if key not in partiler_haric:
+				fieldnames_set_partiler.add(key)
 	with open("yerel_secim_2019_il_genel_meclisi_iller_sabah.csv", "w", newline='') as csvfile:
-		writer = csv.DictWriter(csvfile, fieldnames= partilerHaric + list(fieldnamesSetPartiler))
+		writer = csv.DictWriter(csvfile, fieldnames= partiler_haric + list(fieldnames_set_partiler))
 		writer.writeheader()
 		writer.writerows(total_il_data)
 
@@ -61,5 +61,4 @@ for il_name, il_link in il_linkleri.items():
 print(count)
 
 data_to_csv(total_il_data)
-
 print(time.time() - startTime)
