@@ -4,10 +4,6 @@ import requests
 from bs4 import BeautifulSoup
 import csv
 
-main_page = "https://www.yenisafak.com"
-genel_page = main_page + "/yerel-secim-2019/meclis-secim-sonuclari"
-total_ilce_data = []
-
 # try_func_params={each one of the arguments of try_func as a string for keys: values to be passed as arguments for value}
 def try_until_success(**kwargs):
     while True:
@@ -39,8 +35,48 @@ def get_html(url):
 def html_to_soup(url):
     return BeautifulSoup(get_html(url), "html.parser")
 
+def main_page():
+    return "https://www.yenisafak.com"
+
 def to_proper_int(stringified_integer):
 	return int(str(stringified_integer).replace(".",""))
+
+def get_ilce_data(ilce_link):
+    ilce_page = main_page() + ilce_link
+    soup_start = time.time()
+    ilce_soup = html_to_soup(ilce_page)
+    print("url to soup time:" + str(time.time() - soup_start))
+    secmen_data_region = ilce_soup("div", "result-attendance")[0]("ul", "attendance")[0]("li")[1:4]
+    ilce_data = { li("span")[0].text: to_proper_int(li("span")[1].text) for li in secmen_data_region }
+    ilce_partiler_columns = ilce_soup("div", "container result-content-container party-charts")[0]("div", recursive=False)[6]("div", recursive=False)[2:]
+    for column in ilce_partiler_columns:
+        data_region = column.div.div.table.tr("td")
+        parti_isimleri =[ str(li.div.text) for li in data_region[0].ul("li") ]
+        oy_sayilari = [ to_proper_int(li("div", "bars-votes")[0]("span")[0].text) for li in data_region[1]("ul", "ratio ratio-back")[0]("li") ]
+        ilce_data.update(dict(zip(parti_isimleri, oy_sayilari)))
+    return ilce_data
+
+def get_ilceler_data_from_il(il_link, il):
+    print("getting ilceler from" + " " + il)
+    il_page = main_page() + il_link
+    ilce_rows = html_to_soup(il_page)("div", "table-data", {"data-column": "1"})[0]("ul", recursive=False)[1]("li", recursive=False)
+    ilce_linkleri = { li.a("span", "key")[0].text: li.a["href"] for li in ilce_rows }
+    ilceler_of_il_data = []
+    for ilce, ilce_link in ilce_linkleri.items():
+        ilce_data = {"İl": il, "İlçe": ilce}
+        ilce_data.update(try_until_success(try_func=get_ilce_data, try_func_params={"ilce_link": ilce_link}))
+        ilceler_of_il_data += ilce_data
+        print(ilce_data)
+    return ilceler_of_il_data
+
+def get_total_ilce_data():
+    genel_page = main_page() + "/yerel-secim-2019/meclis-secim-sonuclari"
+    il_linkleri_region = html_to_soup(genel_page)("a", "button", title="Şehirler")[0].parent("ul", "sub-menu", {"data-column": "5"})[0].contents[1:]
+    il_linkleri = { li.a["title"]: li.a["href"] for li in il_linkleri_region }
+    total_ilce_data = []
+    for il, il_link in il_linkleri.items():
+        total_ilce_data += try_until_success( try_func=get_ilceler_data_from_il, try_func_params={"il_link": il_link, "il": il})
+    return total_ilce_data
 
 def data_to_csv(total_data):
 	fieldnames_set = set()
@@ -52,43 +88,7 @@ def data_to_csv(total_data):
 		writer.writeheader()
 		writer.writerows(total_data)
 
-def enter_ilce_soup(ilce_page, ilce_data):
-    soup_start = time.time()
-    ilce_soup = html_to_soup(ilce_page)
-    print("url to soup time:" + str(time.time() - soup_start))
-    secmen_data_region = ilce_soup("div", "result-attendance")[0]("ul", "attendance")[0]("li")[1:4]
-    ilce_secmen_data = { li("span")[0].text: to_proper_int(li("span")[1].text) for li in secmen_data_region }
-    ilce_data.update(ilce_secmen_data)
-    ilce_partiler_columns = ilce_soup("div", "container result-content-container party-charts")[0]("div", recursive=False)[6]("div", recursive=False)[2:]
-    for column in ilce_partiler_columns:
-        data_region = column.div.div.table.tr("td")
-        parti_isimleri =[ str(li.div.text) for li in data_region[0].ul("li") ]
-        oy_sayilari = [ to_proper_int(li("div", "bars-votes")[0]("span")[0].text) for li in data_region[1]("ul", "ratio ratio-back")[0]("li") ]
-        ilce_data.update(dict(zip(parti_isimleri, oy_sayilari)))
-    print(ilce_data)
-    return ilce_data
-
-def enter_il_soup(il_page, il):
-    ilceler_of_il_data = []
-    print("getting ilceler from" + " " + il)
-    ilce_rows = html_to_soup(il_page)("div", "table-data", {"data-column": "1"})[0]("ul", recursive=False)[1]("li", recursive=False)
-    ilce_linkleri = { li.a("span", "key")[0].text: li.a["href"] for li in ilce_rows }
-    for ilce, ilce_link in ilce_linkleri.items():
-        ilce_data = {}
-        ilce_data["İl"] = il
-        ilce_data["İlce"] = ilce
-        ilce_page = main_page + ilce_link
-        ilceler_of_il_data.append(try_until_success(try_func=enter_ilce_soup, try_func_params={"ilce_page": ilce_page, "ilce_data": ilce_data}))
-    return ilceler_of_il_data
-
-il_linkleri_region = html_to_soup(genel_page)("a", "button", title="Şehirler")[0].parent("ul", "sub-menu", {"data-column": "5"})[0].contents[1:]
-il_linkleri = { li.a["title"]: li.a["href"] for li in il_linkleri_region }
-
-for il, il_link in il_linkleri.items():
-    il_page = main_page + il_link
-    total_ilce_data += try_until_success( try_func=enter_il_soup, try_func_params={"il_page": il_page, "il": il})
-
-data_to_csv(total_ilce_data)
+data_to_csv(get_total_ilce_data())
 
 # #print(il_linkleri)
 # example_il_page = main_page + il_linkleri["Adıyaman"]
