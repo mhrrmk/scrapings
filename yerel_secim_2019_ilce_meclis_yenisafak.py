@@ -65,7 +65,7 @@ def get_ilceler_data_from_il(il_link, il):
     for ilce, ilce_link in ilce_linkleri.items():
         ilce_data = {"İl": il, "İlçe": ilce}
         ilce_data.update(try_until_success(try_func=get_ilce_data, try_func_params={"ilce_link": ilce_link}))
-        ilceler_of_il_data += ilce_data
+        ilceler_of_il_data.append(ilce_data)
         print(ilce_data)
     return ilceler_of_il_data
 
