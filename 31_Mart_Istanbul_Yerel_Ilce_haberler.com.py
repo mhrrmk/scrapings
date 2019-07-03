@@ -24,23 +24,6 @@ def htmlToSoup(url):
 def toProperInt(stupid_string):
 	return int(str(stupid_string).replace(".",""))
 
-main_soup = htmlToSoup(main_page)
-#soup_test = BeautifulSoup(getResponseWithUTF8(main_page).text, 'html.parser')
-# print(soup_test.prettify())
-ilce_links_div = main_soup("div", "navMenu navCity")[0]("a")
-ilce_links = []
-for a in ilce_links_div:
-	ilce_links.append(main_page + a["href"])
-#print(ilce_links)
-#print(len(ilce_links))
-#example_ilce_link = ilce_links[-1]
-#print(example_ilce_link)
-#example_ilce_soup = htmlToSoup(example_ilce_link)
-# def vote_from_class(class_name):
-# 	return toProperInt(example_ilce_soup("div", class_name)[0]("span", "yspeVote")[0].string[:-3])
-# print(vote_from_class("yspeBar chp"))
-# print(vote_from_class("yspeBar other"))
-
 #returns a dictionary
 def get_ilce_data(ilce_link):
 	ilce_data = {}
@@ -58,8 +41,6 @@ def get_ilce_data(ilce_link):
 		ilce_data[data("span", "ystbTitle")[0].string] = toProperInt(data("span", "ystbNumber")[0].string)
 	return ilce_data
 
-#print(get_ilce_data(example_ilce_link))
-
 #takes a list of dictionaries
 def dataToCsv(tumIlcelerData):
 	fieldnamesSetPartiler = set()
@@ -73,6 +54,12 @@ def dataToCsv(tumIlcelerData):
 		writer.writeheader()
 		writer.writerows(tumIlcelerData)
 
+main_soup = htmlToSoup(main_page)
+ilce_links_div = main_soup("div", "navMenu navCity")[0]("a")
+ilce_links = []
+for a in ilce_links_div:
+	ilce_links.append(main_page + a["href"])
+
 total_ilce_data = []
 for ilce_link in ilce_links:
 	ilce_data = get_ilce_data(ilce_link)
@@ -80,5 +67,3 @@ for ilce_link in ilce_links:
 	total_ilce_data.append(ilce_data)
 
 dataToCsv(total_ilce_data)
-
-#print(example_ilce_soup("div", "ysTotalBox")[3]("span", "ystbTitle")[0].string)
